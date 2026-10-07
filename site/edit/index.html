@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#000000">
+<title>Edit totals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #000000;
+    --card: #141414;
+    --card-2: #1E1E1E;
+    --fg: #FFFFFF;
+    --muted: #9A9A9A;
+    --line: #2C2C2C;
+    --ok: #FFFFFF;
+    --danger: #FF6B5E;
+    --tap: 52px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Figtree", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.4;
+    padding: 0 14px calc(40px + env(safe-area-inset-bottom));
+  }
+  .wrap { max-width: 620px; margin: 0 auto; }
+  button, input { font: inherit; color: inherit; }
+  input { background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; height: var(--tap); width: 100%; }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  button {
+    border: 0; border-radius: 12px; background: var(--fg); color: var(--bg);
+    font-weight: 600; min-height: var(--tap); padding: 0 20px; cursor: pointer;
+  }
+  button.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); font-weight: 500; }
+  button.danger { background: var(--danger); color: #1A0603; }
+  button:disabled { opacity: 0.45; }
+  label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+  h2 { font-size: 14px; font-weight: 500; color: var(--muted); margin: 26px 0 10px; }
+
+  /* PIN */
+  #lock { padding-top: 18vh; }
+  #lock h1 { font-family: "Bodoni Moda", Georgia, serif; font-weight: 400; font-size: 40px; margin: 0 0 20px; }
+  #lock form { display: grid; gap: 12px; }
+
+  /* Running total */
+  .top {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--bg);
+    padding: 16px 0 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .top .sum {
+    font-family: "Bodoni Moda", Georgia, serif;
+    font-size: 46px; line-height: 1;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  .top .meta { font-size: 13px; color: var(--muted); margin-top: 6px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .top a { color: var(--fg); }
+
+  /* Category cards */
+  .cat { background: var(--card); border-radius: 16px; padding: 14px; margin-bottom: 10px; }
+  .cat > .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .cat .name { font-weight: 600; }
+  .cat .where { font-size: 13px; color: var(--muted); }
+  .cat .val { font-family: "Bodoni Moda", Georgia, serif; font-size: 30px; font-variant-numeric: lining-nums tabular-nums; }
+  .cat.flash { box-shadow: 0 0 0 2px var(--ok) inset; }
+
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .chips button { flex: 1 1 60px; padding: 0 8px; font-weight: 500; background: var(--card-2); color: var(--fg); }
+  .entry { display: flex; gap: 8px; margin-top: 8px; }
+  .entry input { flex: 1; font-size: 19px; }
+  .entry button { flex: 0 0 auto; }
+  .adjust-open {
+    background: transparent; color: var(--muted); font-weight: 500; font-size: 14px;
+    min-height: 34px; padding: 0; margin-top: 6px; text-decoration: underline;
+  }
+  .adjust { display: none; border-top: 1px solid var(--line); margin-top: 10px; padding-top: 12px; }
+  .cat.fixing .adjust { display: block; }
+  .fix { display: flex; gap: 8px; }
+  .fix input { flex: 1; }
+  .toggle { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--muted); margin-top: 12px; }
+  .toggle input { width: 24px; height: 24px; min-height: 0; padding: 0; accent-color: #fff; }
+
+  /* Log and panels */
+  details { background: var(--card); border-radius: 16px; margin-bottom: 10px; }
+  summary { padding: 16px; cursor: pointer; font-weight: 500; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; float: right; color: var(--muted); }
+  details[open] summary::after { content: "–"; }
+  .panel { padding: 0 16px 16px; display: grid; gap: 14px; }
+  .log-list { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow: auto; }
+  .log-list li { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .log-list li:last-child { border: 0; }
+  .log-list .when { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .log-list .via { display: block; font-size: 13px; color: var(--muted); }
+  .empty { color: var(--muted); padding: 12px 0; font-size: 15px; }
+
+  /* Silent auction lot sheet */
+  .lots { display: grid; gap: 6px; }
+  .lot-head, .lot-row { display: grid; grid-template-columns: 74px 1fr 40px; gap: 8px; align-items: center; }
+  .lot-head { font-size: 13px; color: var(--muted); padding: 0 2px 2px; }
+  .lot-row input { height: 46px; border-radius: 10px; }
+  .lot-row input.lot-no { text-align: center; padding: 0 6px; }
+  .lot-row.filled input.bid { border-color: #4A4A4A; }
+  .lot-row .drop {
+    background: transparent; color: var(--muted); min-height: 44px; padding: 0; font-size: 20px; line-height: 1;
+  }
+  .lot-total {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-top: 12px; margin-top: 4px; border-top: 1px solid var(--line);
+  }
+  .lot-total .n { color: var(--muted); font-size: 14px; }
+  .lot-total .amt { font-family: "Bodoni Moda", Georgia, serif; font-size: 26px; font-variant-numeric: lining-nums tabular-nums; }
+
+  #toast {
+    position: fixed; left: 14px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom));
+    background: var(--fg); color: var(--bg); padding: 14px 16px; border-radius: 12px;
+    font-weight: 500; display: none; z-index: 20;
+  }
+  #toast.error { background: var(--danger); color: #1A0603; }
+  #toast.on { display: block; }
+
+  @media (min-width: 620px) {
+    .top .sum { font-size: 56px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <section id="lock">
+    <h1>Edit totals</h1>
+    <form id="lockForm">
+      <div>
+        <label for="pin">PIN</label>
+        <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required>
+      </div>
+      <button type="submit">Unlock</button>
+      <p id="lockError" style="color:var(--danger);margin:0" role="alert"></p>
+    </form>
+  </section>
+
+  <main id="app" hidden>
+    <div class="top">
+      <div class="sum" id="sum">$0</div>
+      <div class="meta">
+        <span id="updated">Not saved yet</span>
+        <a href="/public/" target="_blank" rel="noopener">Open big screen</a>
+      </div>
+    </div>
+
+    <h2>Tap a figure to add it</h2>
+    <div id="cats"></div>
+
+    <details id="lotPanel">
+      <summary>Silent auction lots</summary>
+      <div class="panel">
+        <p style="margin:0;font-size:14px;color:var(--muted)">Type the current high bid against its lot number. The silent auction total is the sum of this sheet and updates the big screen as you go.</p>
+        <div class="lot-head"><span>Lot</span><span>Current bid</span><span></span></div>
+        <div class="lots" id="lots"></div>
+        <div class="lot-total"><span class="n" id="lotCount">0 lots with bids</span><span class="amt" id="lotSum">$0</span></div>
+        <button class="ghost" id="addLot">Add another lot</button>
+      </div>
+    </details>
+
+    <details id="logPanel">
+      <summary>Recent changes</summary>
+      <div class="panel">
+        <ul class="log-list" id="log"></ul>
+        <button class="ghost" id="undo">Undo last change</button>
+      </div>
+    </details>
+
+    <details>
+      <summary>Automatic payments</summary>
+      <div class="panel">
+        <label class="toggle" style="color:var(--fg)">
+          <input type="checkbox" id="feedSquare"> Square terminals count automatically
+        </label>
+        <label class="toggle" style="color:var(--fg)">
+          <input type="checkbox" id="feedStripe"> Stripe payments count automatically
+        </label>
+        <label class="toggle" style="color:var(--fg)">
+          <input type="checkbox" id="feedSilentbids"> Silent auction follows the high bids on silentauctions.app
+        </label>
+        <button class="ghost" id="syncNow">Sync silent auction now</button>
+        <p style="margin:0;font-size:14px;color:var(--muted)">The silent auction figure refreshes every minute on its own. Turn a feed off to enter that income by hand; money taken while it is off is not counted later.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Screen settings</summary>
+      <div class="panel">
+        <div><label for="title">Event name</label><input id="title" type="text" maxlength="80"></div>
+        <div><label for="goal">Goal (0 hides the bar)</label><input id="goal" type="number" min="0" step="1" inputmode="numeric"></div>
+        <button id="saveSettings">Save settings</button>
+      </div>
+    </details>
+
+    <details>
+      <summary>Start over</summary>
+      <div class="panel">
+        <div><label for="resetConfirm">Type RESET to clear every total</label><input id="resetConfirm" type="text" autocomplete="off"></div>
+        <button class="danger" id="resetBtn">Clear all totals</button>
+      </div>
+    </details>
+
+    <p><button class="ghost" id="lockBtn" style="width:100%">Lock this phone</button></p>
+  </main>
+</div>
+<div id="toast" role="status"></div>
+
+<script type="module">
+import { CATEGORIES, GROUPS, TICKET_PRICE, money, moneyExact, totalOf, timeOf, nameOf, ticketsFor } from "/assets/shared.js";
+
+const $ = (id) => document.getElementById(id);
+let pin = sessionStorage.getItem("galaPin") || "";
+let state = null;
+let busy = false;
+
+// Quick-add chips sized to how each kind of money actually arrives.
+// Raffle chips are numbers of tickets; everything else is dollars.
+const CHIPS = {
+  raffle1: [1, 2, 5, 10],
+  raffle2: [1, 2, 5, 10],
+  donations: [20, 50, 100, 500],
+  pledges: [500, 1000, 5000],
+  silent: [100, 250, 500],
+  live: [500, 1000, 2000, 5000],
+  tables: [1000, 2500, 5000],
+  inkind: [100, 500, 1000],
+  opening: [],
+};
+
+const price = (key) => TICKET_PRICE[key];
+const dollars = (n) => (n >= 1000 ? `$${n / 1000}k` : `$${n}`);
+
+function toast(msg, isError = false) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = `on${isError ? " error" : ""}`;
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => (t.className = ""), 2600);
+}
+
+function buzz() {
+  try { navigator.vibrate?.(15); } catch {}
+}
+
+async function api(method, body) {
+  const res = await fetch("/api/totals", {
+    method,
+    cache: "no-store",
+    headers: { "content-type": "application/json", "x-admin-pin": pin },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({ error: "The server sent an unreadable reply." }));
+  if (!res.ok) throw Object.assign(new Error(data.error || `Request failed (${res.status})`), { status: res.status });
+  return data;
+}
+
+async function send(body, okMsg) {
+  if (busy) return false;
+  busy = true;
+  document.querySelectorAll("#app button").forEach((b) => (b.disabled = true));
+  try {
+    state = await api("POST", body);
+    render();
+    if (okMsg) { toast(okMsg); buzz(); }
+    return true;
+  } catch (e) {
+    if (e.status === 401) { lock("Your PIN no longer works. Enter it again."); return false; }
+    toast(e.message, true);
+    return false;
+  } finally {
+    busy = false;
+    document.querySelectorAll("#app button").forEach((b) => (b.disabled = false));
+  }
+}
+
+// ---- Build one card per category
+const cards = {};
+for (const c of CATEGORIES) {
+  const el = document.createElement("div");
+  el.className = "cat";
+  const p = price(c.key);
+  const sub = p ? `${money(p)} a ticket` : c.key === "opening" ? "Money in before the night" : GROUPS[c.group];
+  el.innerHTML = `
+    <div class="head">
+      <div><div class="name">${c.name}</div><div class="where">${sub}<span class="sold"></span></div></div>
+      <div class="val">$0</div>
+    </div>
+    <div class="chips">${CHIPS[c.key]
+      .map((n) => `<button type="button" data-q="${n}">${p ? `+${n} ${n === 1 ? "ticket" : "tickets"}` : `+${dollars(n)}`}</button>`)
+      .join("")}</div>
+    <form class="entry">
+      <input type="number" step="${p ? 1 : 0.01}" inputmode="decimal"
+             placeholder="${p ? "Tickets sold" : c.key === "opening" ? "Starting total" : "Other amount"}"
+             aria-label="${p ? `Tickets sold for ${c.name}` : `Amount for ${c.name}`}">
+      <button type="submit">${c.key === "opening" ? "Set" : "Add"}</button>
+    </form>
+    <button type="button" class="adjust-open">Adjust</button>
+    <div class="adjust">
+      <form class="fix">
+        <input type="number" step="0.01" min="0" inputmode="decimal" aria-label="Correct total for ${c.name}">
+        <button type="submit">Save total</button>
+      </form>
+      <label class="toggle"><input type="checkbox" class="count"> Counts toward total</label>
+    </div>`;
+
+  const [addForm, fixForm] = el.querySelectorAll("form");
+  const addInput = addForm.querySelector("input");
+  const fixInput = fixForm.querySelector("input");
+
+  el.querySelectorAll("[data-q]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      const n = Number(b.dataset.q);
+      const amount = p ? n * p : n;
+      const label = p ? `${n} × ${money(p)} → ${c.name}` : `${money(amount)} → ${c.name}`;
+      if (await send({ action: "add", key: c.key, amount }, label)) flash(el);
+    })
+  );
+
+  addForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const entered = parseFloat(addInput.value);
+
+    if (c.key === "opening") {
+      if (!Number.isFinite(entered) || entered < 0) return toast("Enter a starting total.", true);
+      if (await send({ action: "set", key: c.key, value: entered }, `Starting funds set to ${moneyExact(entered)}`)) {
+        addInput.value = "";
+        addInput.blur();
+        flash(el);
+      }
+      return;
+    }
+
+    if (!Number.isFinite(entered) || entered === 0) {
+      return toast(p ? "Enter how many tickets sold." : "Enter an amount to add.", true);
+    }
+    const amount = p ? entered * p : entered;
+    const label = p ? `${entered} × ${money(p)} → ${c.name}` : `${moneyExact(amount)} → ${c.name}`;
+    if (await send({ action: "add", key: c.key, amount }, label)) {
+      addInput.value = "";
+      addInput.blur();
+      flash(el);
+    }
+  });
+
+  el.querySelector(".adjust-open").addEventListener("click", () => {
+    el.classList.toggle("fixing");
+    const open = el.classList.contains("fixing");
+    el.querySelector(".adjust-open").textContent = open ? "Done" : "Adjust";
+    fixInput.value = state?.amounts[c.key] ?? 0;
+  });
+
+  fixForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const value = parseFloat(fixInput.value);
+    if (!Number.isFinite(value) || value < 0) return toast("Enter a total of zero or more.", true);
+    if (await send({ action: "set", key: c.key, value }, `${c.name} is now ${moneyExact(value)}`)) {
+      el.classList.remove("fixing");
+      el.querySelector(".adjust-open").textContent = "Adjust";
+      fixInput.blur();
+      flash(el);
+    }
+  });
+
+  el.querySelector(".count").addEventListener("change", (e) => {
+    const excluded = new Set(state.excluded);
+    e.target.checked ? excluded.delete(c.key) : excluded.add(c.key);
+    send(
+      { action: "settings", excluded: [...excluded] },
+      e.target.checked ? `${c.name} counts toward the total` : `${c.name} shows but is not counted`
+    );
+  });
+
+  $("cats").appendChild(el);
+  cards[c.key] = { el, val: el.querySelector(".val"), count: el.querySelector(".count"), sold: el.querySelector(".sold") };
+}
+
+function flash(el) {
+  el.classList.add("flash");
+  setTimeout(() => el.classList.remove("flash"), 1000);
+}
+
+function render() {
+  if (!state) return;
+  $("sum").textContent = moneyExact(totalOf(state));
+  $("updated").textContent = state.updatedAt ? `Saved ${timeOf(state.updatedAt)}` : "Not saved yet";
+
+  for (const c of CATEGORIES) {
+    const card = cards[c.key];
+    card.val.textContent = money(state.amounts[c.key]);
+    card.count.checked = !state.excluded.includes(c.key);
+    const tickets = ticketsFor(c.key, state.amounts[c.key]);
+    card.sold.textContent = tickets ? ` · ${tickets} sold` : "";
+  }
+
+  $("feedSquare").checked = state.feeds?.square !== false;
+  $("feedStripe").checked = state.feeds?.stripe !== false;
+  $("feedSilentbids").checked = state.feeds?.silentbids !== false;
+  if (document.activeElement !== $("title")) $("title").value = state.title;
+  if (document.activeElement !== $("goal")) $("goal").value = state.goal || 0;
+
+  if (!$("lots").querySelector(".lot-row") || !$("lots").contains(document.activeElement)) buildLots();
+
+  const log = [...(state.log || [])].reverse();
+  $("log").innerHTML = log.length
+    ? log
+        .map((e) => {
+          const what =
+            e.type === "lot"
+              ? `Silent auction now ${moneyExact(e.after)}`
+              : e.type === "add"
+              ? `${e.amount >= 0 ? "Added" : "Removed"} ${moneyExact(Math.abs(e.amount))} ${e.amount >= 0 ? "to" : "from"} ${nameOf(e.key)}`
+              : `Set ${nameOf(e.key)} to ${moneyExact(e.after)}`;
+          const via =
+            e.source === "square" ? "Square terminal" :
+            e.source === "stripe" ? "Stripe" :
+            e.source === "silentbids" ? "Silent auction sync" : "";
+          const extra = [via, e.note].filter(Boolean).join(" · ");
+          return `<li><span>${what}${extra ? `<span class="via">${extra}</span>` : ""}</span><span class="when">${timeOf(e.at)}</span></li>`;
+        })
+        .join("")
+    : `<li class="empty">Nothing yet. Amounts you add will show here.</li>`;
+  $("undo").hidden = !log.length;
+  $("logPanel").querySelector("summary").textContent = log.length ? `Recent changes (${log.length})` : "Recent changes";
+}
+
+// ---- Silent auction lot sheet
+const DEFAULT_LOTS = Array.from({ length: 25 }, (_, i) => ({ lot: String(201 + i), bid: 0 }));
+
+function lotRows() {
+  const saved = state?.lots?.length ? state.lots : [];
+  if (!saved.length) return DEFAULT_LOTS.map((l) => ({ ...l }));
+  // Keep the 25 default lots visible even before anyone bids on them.
+  const byNumber = new Map(saved.map((l) => [String(l.lot), l]));
+  for (const d of DEFAULT_LOTS) if (!byNumber.has(d.lot)) byNumber.set(d.lot, { ...d });
+  return [...byNumber.values()].sort((a, b) => String(a.lot).localeCompare(String(b.lot), undefined, { numeric: true }));
+}
+
+function saveLot(row) {
+  const lot = row.querySelector(".lot-no").value.trim();
+  const bid = parseFloat(row.querySelector(".bid").value);
+  if (!lot) return toast("Give the lot a number.", true);
+  if (!Number.isFinite(bid) || bid < 0) return toast("Enter a bid of zero or more.", true);
+  if (bid === Number(row.dataset.saved || 0)) return;
+  row.dataset.saved = String(bid);
+  send({ action: "lot", lot, bid }, `Lot ${lot} at ${money(bid)}`);
+}
+
+function buildLots() {
+  const host = $("lots");
+  host.innerHTML = "";
+  for (const l of lotRows()) {
+    const row = document.createElement("div");
+    row.className = `lot-row${l.bid ? " filled" : ""}`;
+    row.dataset.saved = String(l.bid || 0);
+    row.innerHTML = `
+      <input class="lot-no" type="text" inputmode="numeric" value="${l.lot}" aria-label="Lot number">
+      <input class="bid" type="number" min="0" step="1" inputmode="decimal" placeholder="No bid"
+             value="${l.bid || ""}" aria-label="Current bid for lot ${l.lot}">
+      <button type="button" class="drop" title="Remove lot ${l.lot}" aria-label="Remove lot ${l.lot}">×</button>`;
+    const bidInput = row.querySelector(".bid");
+    bidInput.addEventListener("change", () => saveLot(row));
+    bidInput.addEventListener("keydown", (e) => { if (e.key === "Enter") bidInput.blur(); });
+    row.querySelector(".drop").addEventListener("click", () => {
+      const lot = row.querySelector(".lot-no").value.trim();
+      if (Number(row.dataset.saved) && !confirm(`Remove lot ${lot} and its bid?`)) return;
+      if (Number(row.dataset.saved)) send({ action: "removeLot", lot }, `Lot ${lot} removed`);
+      else row.remove();
+      renderLotFooter();
+    });
+    host.appendChild(row);
+  }
+  renderLotFooter();
+}
+
+function renderLotFooter() {
+  const rows = [...$("lots").querySelectorAll(".lot-row")];
+  let sum = 0;
+  let n = 0;
+  for (const row of rows) {
+    const bid = parseFloat(row.querySelector(".bid").value) || 0;
+    row.classList.toggle("filled", bid > 0);
+    if (bid > 0) { sum += bid; n += 1; }
+  }
+  $("lotSum").textContent = moneyExact(sum);
+  $("lotCount").textContent = `${n} of ${rows.length} lots with bids`;
+  $("lotPanel").querySelector("summary").textContent = n ? `Silent auction lots (${n} bid)` : "Silent auction lots";
+}
+
+$("lots").addEventListener("input", renderLotFooter);
+
+$("addLot").addEventListener("click", () => {
+  const rows = [...$("lots").querySelectorAll(".lot-no")];
+  const last = Number(rows[rows.length - 1]?.value) || 200;
+  const row = document.createElement("div");
+  row.className = "lot-row";
+  row.dataset.saved = "0";
+  row.innerHTML = `
+    <input class="lot-no" type="text" inputmode="numeric" value="${last + 1}" aria-label="Lot number">
+    <input class="bid" type="number" min="0" step="1" inputmode="decimal" placeholder="No bid" aria-label="Current bid">
+    <button type="button" class="drop" aria-label="Remove lot">×</button>`;
+  const bidInput = row.querySelector(".bid");
+  bidInput.addEventListener("change", () => saveLot(row));
+  row.querySelector(".drop").addEventListener("click", () => { row.remove(); renderLotFooter(); });
+  $("lots").appendChild(row);
+  renderLotFooter();
+  bidInput.focus();
+});
+
+$("undo").addEventListener("click", () => {
+  const last = state.log[state.log.length - 1];
+  if (!last) return;
+  if (confirm(`Undo the last change to ${nameOf(last.key)}? It goes back to ${moneyExact(last.before)}.`)) {
+    send({ action: "undo" }, "Last change undone");
+  }
+});
+const FEED_LABELS = { square: "Square", stripe: "Stripe", silentbids: "Silent auction sync" };
+for (const [feed, id] of [["square", "feedSquare"], ["stripe", "feedStripe"], ["silentbids", "feedSilentbids"]]) {
+  $(id).addEventListener("change", (e) => {
+    const label = FEED_LABELS[feed];
+    send({ action: "settings", feeds: { [feed]: e.target.checked } }, e.target.checked ? `${label} counting automatically` : `${label} paused`);
+  });
+}
+$("syncNow").addEventListener("click", () => send({ action: "sync" }, "Silent auction synced"));
+$("saveSettings").addEventListener("click", () =>
+  send({ action: "settings", title: $("title").value, goal: parseFloat($("goal").value) || 0 }, "Settings saved")
+);
+$("resetBtn").addEventListener("click", async () => {
+  if ($("resetConfirm").value !== "RESET") return toast("Type RESET to confirm.", true);
+  if (await send({ action: "reset", confirm: "RESET" }, "All totals cleared")) $("resetConfirm").value = "";
+});
+$("lockBtn").addEventListener("click", () => lock());
+
+function lock(message = "") {
+  pin = "";
+  sessionStorage.removeItem("galaPin");
+  $("app").hidden = true;
+  $("lock").hidden = false;
+  $("lockError").textContent = message;
+  $("pin").value = "";
+  $("pin").focus();
+}
+
+async function unlock() {
+  const data = await api("GET");
+  if (!data.authed) throw new Error("Incorrect PIN.");
+  state = data;
+  sessionStorage.setItem("galaPin", pin);
+  $("lock").hidden = true;
+  $("app").hidden = false;
+  render();
+}
+
+$("lockForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  pin = $("pin").value.trim();
+  try { await unlock(); } catch (err) { lock(err.message); }
+});
+
+// Other volunteers' entries and terminal payments appear here too.
+setInterval(async () => {
+  if (!pin || busy || $("app").hidden || document.hidden) return;
+  try {
+    const data = await api("GET");
+    if (data.authed) { state = data; render(); }
+  } catch {}
+}, 5000);
+
+if (pin) unlock().catch(() => lock()); else lock();
+</script>
+</body>
+</html>

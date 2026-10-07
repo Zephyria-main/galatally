@@ -1,0 +1,13 @@
+[build]
+  publish = "site"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/"
+  to = "/public/"
+  status = 302
+
+[[headers]]
+  for = "/edit/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"

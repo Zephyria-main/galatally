@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<title>Funds raised</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500&family=Figtree:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #000000;
+    --fg: #FFFFFF;
+    --muted: #8F8F8F;
+    --rule: rgba(255, 255, 255, 0.16);
+    --glow: rgba(255, 255, 255, 0.07);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); }
+  body {
+    color: var(--fg);
+    font-family: "Figtree", system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: clamp(18px, 3vw, 56px) clamp(20px, 4.5vw, 88px);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    font-size: clamp(13px, 1.1vw, 19px);
+    color: var(--muted);
+  }
+  /* Logos: a wide mark and a square one, matched on height. */
+  .logos { display: flex; align-items: center; gap: clamp(12px, 1.6vw, 24px); }
+  .logos img { display: block; height: clamp(30px, 3.4vw, 64px); width: auto; }
+  .logos img.square { aspect-ratio: 1 / 1; }
+  .logos .divider { width: 1px; align-self: stretch; background: var(--rule); }
+  .logos img[hidden] { display: none; }
+
+  .hero h1 {
+    font-weight: 400;
+    font-size: clamp(15px, 1.5vw, 26px);
+    color: var(--muted);
+    margin: 0 0 0.6em;
+    letter-spacing: 0.01em;
+  }
+  .status { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--fg); }
+  .status.offline .dot { background: var(--muted); }
+
+  .hero {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(20px, 4vh, 64px) 0;
+    text-align: center;
+  }
+  .hero > p { margin: 0; font-size: clamp(15px, 1.5vw, 26px); color: var(--muted); }
+  .total {
+    font-family: "Bodoni Moda", Georgia, serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-size: clamp(66px, 14vw, 280px);
+    line-height: 0.95;
+    letter-spacing: -0.025em;
+    font-variant-numeric: lining-nums tabular-nums;
+    margin: 0.1em 0 0.14em;
+  }
+  .goal { width: min(880px, 92%); display: none; }
+  .goal.on { display: block; }
+  .bar { height: 2px; background: var(--rule); position: relative; overflow: hidden; }
+  .bar span {
+    position: absolute; inset: 0 auto 0 0; width: 0;
+    background: var(--fg);
+    transition: width 1.2s cubic-bezier(.2,.7,.2,1);
+  }
+  .goal p { margin: 14px 0 0; font-size: clamp(14px, 1.15vw, 20px); color: var(--muted); }
+
+  .breakdown { display: grid; grid-template-columns: 2fr 1fr; gap: clamp(22px, 4.5vw, 88px); }
+  .group h2 { font-weight: 400; font-size: clamp(13px, 1.1vw, 18px); color: var(--muted); margin: 0 0 4px; }
+  .group ul { list-style: none; margin: 0; padding: 0; display: grid; column-gap: clamp(22px, 4vw, 64px); }
+  .group.night ul { grid-template-columns: 1fr 1fr; }
+  .group li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: clamp(9px, 1.2vh, 17px) 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .group li .name { font-size: clamp(14px, 1.35vw, 23px); }
+  .group li .amt {
+    font-family: "Bodoni Moda", Georgia, serif;
+    font-size: clamp(19px, 2vw, 36px);
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  .group li .note { font-size: 0.68em; color: var(--muted); margin-top: 1px; }
+  .group li .note:not([hidden]) { display: block; }
+  /* A change pulses the row rather than recolouring it, so the palette stays black and white. */
+  .group li.changed { animation: pulse 2.2s ease-out; }
+  @keyframes pulse {
+    0% { background: var(--glow); box-shadow: 0 0 0 10px var(--glow); }
+    100% { background: transparent; box-shadow: 0 0 0 10px transparent; }
+  }
+
+  #fsBtn {
+    position: fixed; right: 16px; bottom: 16px;
+    font: 400 15px/1 "Figtree", system-ui, sans-serif;
+    color: var(--bg); background: var(--fg);
+    border: 0; border-radius: 999px; padding: 13px 20px; cursor: pointer;
+  }
+  #fsBtn:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+  body.fullscreen #fsBtn { display: none; }
+  body.fullscreen.idle { cursor: none; }
+
+  @media (max-width: 760px) {
+    header { flex-direction: column; gap: 2px; }
+    .breakdown { grid-template-columns: 1fr; }
+    .group.night ul { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bar span { transition: none; }
+    .group li.changed { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="logos">
+      <img id="logoWide" src="/assets/abcflogo.png" alt="Australian Brain Cancer Foundation">
+      <span class="divider" id="logoDivider" aria-hidden="true"></span>
+      <img id="logoSquare" class="square" src="/assets/raku.png" alt="RAKU">
+    </div>
+    <div class="status" id="status" role="status"><span class="dot" aria-hidden="true"></span><span id="statusText">Connecting…</span></div>
+  </header>
+
+  <section class="hero" aria-live="polite">
+    <h1 id="title">2026 ABCF RAKU Canberra Brain Cancer Gala Dinner</h1>
+    <p>Raised so far</p>
+    <div class="total" id="total">$0</div>
+    <div class="goal" id="goal">
+      <div class="bar"><span id="barFill"></span></div>
+      <p id="goalText"></p>
+    </div>
+  </section>
+
+  <section class="breakdown" id="breakdown"></section>
+  <button id="fsBtn">Full screen</button>
+
+<script type="module">
+// ---- Full screen: hides the address bar and everything else.
+const fsBtn = document.getElementById("fsBtn");
+let wakeLock = null;
+
+async function enterFullscreen() {
+  try {
+    await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+  } catch {
+    fsBtn.textContent = "Press F11 for full screen";
+    return;
+  }
+  try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
+}
+
+fsBtn.addEventListener("click", () => (document.fullscreenElement ? document.exitFullscreen() : enterFullscreen()));
+document.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() === "f" && !e.metaKey && !e.ctrlKey) fsBtn.click();
+});
+document.addEventListener("dblclick", () => fsBtn.click());
+document.addEventListener("fullscreenchange", () => {
+  document.body.classList.toggle("fullscreen", Boolean(document.fullscreenElement));
+  if (!document.fullscreenElement) { wakeLock?.release?.(); wakeLock = null; }
+});
+document.addEventListener("visibilitychange", async () => {
+  if (!document.hidden && document.fullscreenElement && !wakeLock) {
+    try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
+  }
+});
+
+// A logo slot stays empty rather than showing a broken image.
+for (const id of ["logoWide", "logoSquare"]) {
+  const img = document.getElementById(id);
+  img.addEventListener("error", () => {
+    img.hidden = true;
+    const wide = document.getElementById("logoWide");
+    const square = document.getElementById("logoSquare");
+    document.getElementById("logoDivider").hidden = wide.hidden || square.hidden;
+  });
+}
+
+let idleTimer;
+const wake = () => {
+  document.body.classList.remove("idle");
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => document.body.classList.add("idle"), 4000);
+};
+["mousemove", "mousedown", "keydown", "touchstart"].forEach((ev) => document.addEventListener(ev, wake));
+wake();
+</script>
+
+<script type="module">
+import { CATEGORIES, GROUPS, money, totalOf, timeOf, ticketsFor } from "/assets/shared.js";
+
+const POLL_MS = 3000;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (id) => document.getElementById(id);
+
+const rows = {};
+for (const [groupKey, label] of Object.entries(GROUPS)) {
+  const section = document.createElement("div");
+  section.className = `group ${groupKey}`;
+  section.innerHTML = `<h2>${label}</h2><ul></ul>`;
+  const ul = section.querySelector("ul");
+  for (const c of CATEGORIES.filter((c) => c.group === groupKey)) {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="name">${c.name}<span class="note" hidden>Not included in total</span></span><span class="amt">$0</span>`;
+    ul.appendChild(li);
+    rows[c.key] = { li, amt: li.querySelector(".amt"), note: li.querySelector(".note"), value: null };
+  }
+  $("breakdown").appendChild(section);
+}
+
+let shownTotal = 0;
+let anim = null;
+function animateTotal(to) {
+  cancelAnimationFrame(anim);
+  const from = shownTotal;
+  if (reduceMotion || from === to) { shownTotal = to; $("total").textContent = money(to); return; }
+  const start = performance.now();
+  const step = (now) => {
+    const t = Math.min(1, (now - start) / 1400);
+    shownTotal = from + (to - from) * (1 - Math.pow(1 - t, 3));
+    $("total").textContent = money(shownTotal);
+    if (t < 1) anim = requestAnimationFrame(step);
+    else shownTotal = to;
+  };
+  anim = requestAnimationFrame(step);
+}
+
+function render(state) {
+  $("title").textContent = state.title;
+  document.title = `${money(totalOf(state))} raised · ${state.title}`;
+
+  for (const c of CATEGORIES) {
+    const row = rows[c.key];
+    const v = state.amounts[c.key] || 0;
+    if (row.value !== null && row.value !== v) {
+      row.li.classList.remove("changed");
+      void row.li.offsetWidth;
+      row.li.classList.add("changed");
+    }
+    row.value = v;
+    row.amt.textContent = money(v);
+    const tickets = ticketsFor(c.key, v);
+    const bidCount = c.key === "silent" ? (state.lots || []).filter((l) => Number(l.bid) > 0).length : 0;
+    const note = state.excluded.includes(c.key)
+      ? "Not included in total"
+      : tickets
+        ? `${tickets} tickets`
+        : bidCount
+          ? `${bidCount} lots with bids`
+          : "";
+    row.note.textContent = note;
+    row.note.hidden = !note;
+  }
+
+  const total = totalOf(state);
+  animateTotal(total);
+
+  const goalOn = state.goal > 0;
+  $("goal").classList.toggle("on", goalOn);
+  if (goalOn) {
+    const pct = Math.round((total / state.goal) * 100);
+    $("barFill").style.width = `${Math.min(100, pct)}%`;
+    $("goalText").textContent = `${pct}% of our ${money(state.goal)} goal`;
+  }
+}
+
+async function poll() {
+  try {
+    const res = await fetch("/api/totals", { cache: "no-store" });
+    if (!res.ok) throw new Error(res.status);
+    const state = await res.json();
+    render(state);
+    $("status").classList.remove("offline");
+    $("statusText").textContent = state.updatedAt ? `Updated ${timeOf(state.updatedAt)}` : "Live";
+  } catch {
+    $("status").classList.add("offline");
+    $("statusText").textContent = "Reconnecting…";
+  } finally {
+    setTimeout(poll, POLL_MS);
+  }
+}
+poll();
+</script>
+</body>
+</html>
