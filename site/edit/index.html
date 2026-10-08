@@ -184,7 +184,11 @@
       <summary>Automatic payments</summary>
       <div class="panel">
         <label class="toggle" style="color:var(--fg)">
-          <input type="checkbox" id="feedSquare"> Square terminals count automatically
+          <input type="checkbox" id="feedGalasquare"> Donations follow the donations board
+        </label>
+        <button class="ghost" id="syncDonationsNow">Sync donations now</button>
+        <label class="toggle" style="color:var(--fg)">
+          <input type="checkbox" id="feedSquare"> Square payments count as they happen
         </label>
         <label class="toggle" style="color:var(--fg)">
           <input type="checkbox" id="feedStripe"> Stripe payments count automatically
@@ -409,6 +413,7 @@ function render() {
   $("feedSquare").checked = state.feeds?.square !== false;
   $("feedStripe").checked = state.feeds?.stripe !== false;
   $("feedSilentbids").checked = state.feeds?.silentbids !== false;
+  $("feedGalasquare").checked = state.feeds?.galasquare !== false;
   if (document.activeElement !== $("title")) $("title").value = state.title;
   if (document.activeElement !== $("goal")) $("goal").value = state.goal || 0;
 
@@ -427,7 +432,8 @@ function render() {
           const via =
             e.source === "square" ? "Square terminal" :
             e.source === "stripe" ? "Stripe" :
-            e.source === "silentbids" ? "Silent auction sync" : "";
+            e.source === "silentbids" ? "Silent auction sync" :
+            e.source === "galasquare" ? "Donations board" : "";
           const extra = [via, e.note].filter(Boolean).join(" · ");
           return `<li><span>${what}${extra ? `<span class="via">${extra}</span>` : ""}</span><span class="when">${timeOf(e.at)}</span></li>`;
         })
@@ -527,14 +533,15 @@ $("undo").addEventListener("click", () => {
     send({ action: "undo" }, "Last change undone");
   }
 });
-const FEED_LABELS = { square: "Square", stripe: "Stripe", silentbids: "Silent auction sync" };
-for (const [feed, id] of [["square", "feedSquare"], ["stripe", "feedStripe"], ["silentbids", "feedSilentbids"]]) {
+const FEED_LABELS = { square: "Square", stripe: "Stripe", silentbids: "Silent auction sync", galasquare: "Donations board sync" };
+for (const [feed, id] of [["square", "feedSquare"], ["stripe", "feedStripe"], ["silentbids", "feedSilentbids"], ["galasquare", "feedGalasquare"]]) {
   $(id).addEventListener("change", (e) => {
     const label = FEED_LABELS[feed];
     send({ action: "settings", feeds: { [feed]: e.target.checked } }, e.target.checked ? `${label} counting automatically` : `${label} paused`);
   });
 }
 $("syncNow").addEventListener("click", () => send({ action: "sync" }, "Silent auction synced"));
+$("syncDonationsNow").addEventListener("click", () => send({ action: "syncDonations" }, "Donations synced"));
 $("saveSettings").addEventListener("click", () =>
   send({ action: "settings", title: $("title").value, goal: parseFloat($("goal").value) || 0 }, "Settings saved")
 );

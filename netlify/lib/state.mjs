@@ -13,7 +13,7 @@ export const defaults = () => ({
   goal: 0,
   amounts: Object.fromEntries(KEYS.map((k) => [k, 0])),
   excluded: [],
-  feeds: { square: true, stripe: true, silentbids: true },
+  feeds: { square: true, stripe: true, silentbids: true, galasquare: true },
   lots: [],
   updatedAt: null,
   log: [],

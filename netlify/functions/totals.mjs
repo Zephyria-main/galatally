@@ -1,5 +1,6 @@
 import { KEYS, load, mutate, addAmount, setAmount, setLotBid, removeLot, defaults, round2, json } from "../lib/state.mjs";
 import { syncSilentAuction } from "../lib/silentbids.mjs";
+import { syncDonations } from "../lib/galasquare.mjs";
 
 export default async (req) => {
   const adminPin = process.env.ADMIN_PIN;
@@ -23,8 +24,8 @@ export default async (req) => {
     return json({ error: "Invalid request." }, 400);
   }
 
-  if (body.action === "sync") {
-    const result = await syncSilentAuction();
+  if (body.action === "sync" || body.action === "syncDonations") {
+    const result = body.action === "sync" ? await syncSilentAuction() : await syncDonations();
     if (result.error) return json({ error: result.error }, 502);
     return json({ ...(await load()), authed: true });
   }
@@ -60,7 +61,7 @@ export default async (req) => {
         }
         if (Array.isArray(body.excluded)) s.excluded = body.excluded.filter((k) => KEYS.includes(k));
         if (body.feeds && typeof body.feeds === "object") {
-          for (const feed of ["square", "stripe", "silentbids"]) {
+          for (const feed of ["square", "stripe", "silentbids", "galasquare"]) {
             if (typeof body.feeds[feed] === "boolean") s.feeds[feed] = body.feeds[feed];
           }
         }
