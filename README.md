@@ -1,6 +1,8 @@
 # 2026 ABCF RAKU Canberra Brain Cancer Gala Dinner — live tally
 
 - `/public` — full-screen black-and-white display for the big screen (refreshes every 3 seconds)
+- `/raffle` — raffles total, one big figure
+- `/live` — live auction total, one big figure
 - `/edit` — PIN-protected, mobile-first page for entering money by hand
 - `/` — redirects to `/public`
 - `/api/webhooks/square` — Square payments (terminals and pads)
@@ -48,6 +50,8 @@ No build command is needed. Data lives in Netlify Blobs (store `gala-totals`), w
 | `STRIPE_WEBHOOK_SECRET` | Stripe | `whsec_…`. Comma-separate to accept two accounts |
 | `STRIPE_CATEGORY` | Stripe | Default category, e.g. `silent` |
 | `STRIPE_ACCOUNT_MAP` | optional | `acct_123=silent,acct_456=donations` — routes by Connect account |
+| `GALASQUARE_TOTALS_URL` | donations sync | `https://galasquare.netlify.app/api/tally` |
+| `GALASQUARE_TOKEN` | donations sync | Same value as `TALLY_TOKEN` on galasquare |
 | `SILENTBIDS_TOTALS_URL` | silent auction sync | JSON feed of current bids (see below) |
 | `SILENTBIDS_TOKEN` | optional | Sent as `Authorization: Bearer …` to that feed |
 | `SILENTBIDS_LOT_RANGE` | optional | Silent lot numbers, default `200-299`. Only used when the feed carries no lot type |
@@ -83,6 +87,26 @@ each payment id counts once.
 A PaymentIntent can override its category with metadata `gala_category`.
 
 Unsigned or wrongly signed requests are rejected, so the endpoints can be public.
+
+## Donations from the galasquare board
+
+Donations come from the existing donations board rather than from Square directly,
+so both screens show the same figure and the board's own rules about confirmed
+payments and fee coverage are the ones that apply.
+
+Add the `/api/tally` function to galasquare (see `galasquare-tally-endpoint.mjs`),
+set `TALLY_TOKEN` there, then point `GALASQUARE_TOTALS_URL` and `GALASQUARE_TOKEN`
+at it here. A scheduled function follows it every minute, and there is a
+"Sync donations now" button on /edit.
+
+The feed should return at least:
+
+```json
+{ "raised": 28650, "donations": 143, "unconfirmed": 2, "stationsOnline": 14 }
+```
+
+The `square` webhook feed stays available but should be left off while this is on,
+or card donations will be counted twice.
 
 ## Silent auction lot sheet
 

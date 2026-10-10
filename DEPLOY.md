@@ -47,6 +47,7 @@ Deploys → Trigger deploy → Deploy site.
 ## 5. Check it works
 
 - `https://abcf-gala-tally.netlify.app` redirects to the big screen, shows $0 and the logos
+- `/raffle` and `/live` each show one big figure from the same data
 - `/edit` asks for the PIN
 - Add $10 to Donations on /edit; it appears on the screen within ~3 seconds
 - Press "Full screen" on the display machine

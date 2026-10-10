@@ -41,7 +41,7 @@
   .logos img { display: block; height: clamp(30px, 3.4vw, 64px); width: auto; }
   .logos img.square { aspect-ratio: 1 / 1; }
   .logos .divider { width: 1px; align-self: stretch; background: var(--rule); }
-  .logos img[hidden] { display: none; }
+  .logos img[hidden], .logos .divider[hidden] { display: none; }
 
   .hero h1 {
     font-weight: 400;
@@ -185,16 +185,21 @@ document.addEventListener("visibilitychange", async () => {
   }
 });
 
-// A logo slot stays empty rather than showing a broken image.
+// Hide a logo slot whose file is missing, even if the error fired before this ran.
+function syncLogos() {
+  const wide = document.getElementById("logoWide");
+  const square = document.getElementById("logoSquare");
+  for (const img of [wide, square]) {
+    if (img.complete && img.naturalWidth === 0) img.hidden = true;
+  }
+  document.getElementById("logoDivider").hidden = wide.hidden || square.hidden;
+}
 for (const id of ["logoWide", "logoSquare"]) {
   const img = document.getElementById(id);
-  img.addEventListener("error", () => {
-    img.hidden = true;
-    const wide = document.getElementById("logoWide");
-    const square = document.getElementById("logoSquare");
-    document.getElementById("logoDivider").hidden = wide.hidden || square.hidden;
-  });
+  img.addEventListener("error", () => { img.hidden = true; syncLogos(); });
+  img.addEventListener("load", syncLogos);
 }
+syncLogos();
 
 let idleTimer;
 const wake = () => {

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<title>Live auction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400&family=Figtree:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#000; --fg:#fff; --muted:#8F8F8F; --rule:rgba(255,255,255,.16); }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); }
+  body {
+    color: var(--fg);
+    font-family: "Figtree", system-ui, sans-serif;
+    display: flex; flex-direction: column; min-height: 100vh;
+    padding: clamp(18px,3vw,56px) clamp(20px,4.5vw,88px);
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    display:flex; justify-content:space-between; align-items:center; gap:16px;
+    font-size: clamp(13px,1.1vw,19px); color: var(--muted);
+  }
+  .logos { display:flex; align-items:center; gap:clamp(12px,1.6vw,24px); }
+  .logos img { display:block; height:clamp(30px,3.4vw,64px); width:auto; }
+  .logos img.square { aspect-ratio:1/1; }
+  .logos .divider { width:1px; align-self:stretch; background:var(--rule); }
+  .logos img[hidden], .logos .divider[hidden] { display:none; }
+  .status { display:flex; align-items:center; gap:8px; white-space:nowrap; }
+  .dot { width:7px; height:7px; border-radius:50%; background:var(--fg); }
+  .status.offline .dot { background: var(--muted); }
+
+  main {
+    flex:1 0 auto; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center;
+  }
+  h1 {
+    font-weight:400; margin:0;
+    font-size: clamp(20px,3.4vw,58px);
+    letter-spacing:.01em; color:var(--fg);
+  }
+  .figure {
+    font-family:"Bodoni Moda", Georgia, serif;
+    font-weight:400;
+    font-size: clamp(84px,21vw,440px);
+    line-height:.92; letter-spacing:-.025em;
+    font-variant-numeric: lining-nums tabular-nums;
+    margin:.1em 0 0;
+  }
+  .detail {
+    margin:clamp(14px,2.2vh,34px) 0 0;
+    font-size: clamp(14px,1.5vw,26px); color:var(--muted);
+    white-space:pre-wrap;
+  }
+  #fsBtn {
+    position:fixed; right:16px; bottom:16px;
+    font:400 15px/1 "Figtree", system-ui, sans-serif;
+    color:var(--bg); background:var(--fg);
+    border:0; border-radius:999px; padding:13px 20px; cursor:pointer;
+  }
+  #fsBtn:focus-visible { outline:2px solid var(--fg); outline-offset:3px; }
+  body.fullscreen #fsBtn { display:none; }
+  body.fullscreen.idle { cursor:none; }
+  @media (max-width:760px){ header{flex-direction:column; gap:2px;} }
+</style>
+</head>
+<body>
+  <header>
+    <div class="logos">
+      <img id="logoWide" src="/assets/abcflogo.png" alt="Australian Brain Cancer Foundation">
+      <span class="divider" id="logoDivider" aria-hidden="true"></span>
+      <img id="logoSquare" class="square" src="/assets/raku.png" alt="RAKU">
+    </div>
+    <div class="status" id="status" role="status"><span class="dot" aria-hidden="true"></span><span id="statusText">Connecting…</span></div>
+  </header>
+
+  <main aria-live="polite">
+    <h1 id="heading">Live auction</h1>
+    <div class="figure" id="figure">$0</div>
+    <p class="detail" id="detail"></p>
+  </main>
+
+  <button id="fsBtn">Full screen</button>
+
+<script type="module">
+import { startFocusScreen } from "/assets/focus.js";
+
+// Hide a logo slot whose file is missing, even if the error fired before this ran.
+function syncLogos() {
+  const wide = document.getElementById("logoWide");
+  const square = document.getElementById("logoSquare");
+  for (const img of [wide, square]) {
+    if (img.complete && img.naturalWidth === 0) img.hidden = true;
+  }
+  document.getElementById("logoDivider").hidden = wide.hidden || square.hidden;
+}
+for (const id of ["logoWide", "logoSquare"]) {
+  const img = document.getElementById(id);
+  img.addEventListener("error", () => { img.hidden = true; syncLogos(); });
+  img.addEventListener("load", syncLogos);
+}
+syncLogos();
+
+startFocusScreen({ title: "Live auction", keys: ["live"] });
+</script>
+</body>
+</html>
